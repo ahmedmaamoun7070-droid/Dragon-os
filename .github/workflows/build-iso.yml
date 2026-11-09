@@ -1,0 +1,43 @@
+name: Build DRAGON OS ISO
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download project
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin
+
+      - name: Extract project ZIP
+        run: |
+          unzip -o DRAGON-OS-source-files.zip -d source
+          cp -r source/.github .
+          cp -r source/config .
+
+      - name: Build DRAGON OS
+        run: |
+          lb config \
+            --distribution trixie \
+            --architectures amd64 \
+            --binary-images iso-hybrid \
+            --archive-areas "main contrib non-free non-free-firmware"
+          sudo lb build
+
+      - name: Upload ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: DRAGON-OS-ISO
+          path: "*.iso"
+          if-no-files-found: error
