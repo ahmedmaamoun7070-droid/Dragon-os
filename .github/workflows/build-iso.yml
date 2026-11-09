@@ -1,3 +1,4 @@
+
 name: Build DRAGON OS ISO
 
 on:
@@ -12,30 +13,43 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: Download project
+      - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Install tools
+      - name: Install live-build
         run: |
           sudo apt-get update
-          sudo apt-get install -y live-build debootstrap squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin
+          sudo apt-get install -y live-build debootstrap squashfs-tools xorriso
 
-      - name: Extract project ZIP
+      - name: Configure DRAGON OS
         run: |
-          unzip -o DRAGON-OS-source-files.zip -d source
-          cp -r source/.github .
-          cp -r source/config .
-
-      - name: Build DRAGON OS
-        run: |
-          lb config \
+          mkdir -p config/package-lists
+          cat > config/package-lists/dragon.list.chroot <<'EOF'
+          live-boot
+          live-config
+          task-xfce-desktop
+          xfce4
+          lightdm
+          network-manager
+          firefox-esr
+          thunar
+          mousepad
+          htop
+          gparted
+          sudo
+          locales
+          EOF
+          sudo lb config \
             --distribution trixie \
             --architectures amd64 \
             --binary-images iso-hybrid \
-            --archive-areas "main contrib non-free non-free-firmware"
-          sudo lb build
+            --archive-areas "main contrib non-free non-free-firmware" \
+            --bootappend-live "boot=live components username=dragon hostname=dragon-os locales=en_US.UTF-8"
 
-      - name: Upload ISO
+      - name: Build bootable ISO
+        run: sudo lb build
+
+      - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
           name: DRAGON-OS-ISO
